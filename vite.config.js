@@ -17,14 +17,5 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false, // Vercel build memory issues thavirkka
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          utils: ['axios', 'uuid', 'zustand'],
-          ui: ['framer-motion', 'lucide-react']
-        }
-      }
-    }
   }
 });
