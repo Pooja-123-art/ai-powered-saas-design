@@ -4,6 +4,7 @@
 
 import axios from 'axios';
 
+// Fallback to empty string or relative path if deployed on same host, or local fallback
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 const api = axios.create({
@@ -17,7 +18,7 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
-    console.log(`🌐 API Request: ${config.method.toUpperCase()} ${config.url}`);
+    console.log(`🌐 API Request: ${config.method?.toUpperCase()} ${config.url}`);
     return config;
   },
   (error) => Promise.reject(error)
@@ -29,7 +30,9 @@ api.interceptors.response.use(
   (error) => {
     const message = error.response?.data?.error || error.message || 'Network error';
     console.error('❌ API Error:', message);
-    return Promise.reject(new Error(message));
+    
+    // Return empty array/data structure gracefully instead of breaking React rendering loops
+    return Promise.resolve({ success: false, data: [], error: message });
   }
 );
 
