@@ -1,82 +1,60 @@
-/**
- * Axios API Client Configuration
- */
+import React, { useState, useEffect } from 'react';
+import { fetchProjects } from './api'; // update relative path if needed
 
-import axios from 'axios';
+function App() {
+  const [projects, setProjects] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-// Fallback to empty string or relative path if deployed on same host, or local fallback
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+  useEffect(() => {
+    const loadProjects = async () => {
+      setLoading(true);
+      try {
+        const res = await fetchProjects();
+        // Check if data is array or object and extract properly
+        if (res && res.data && Array.isArray(res.data)) {
+          setProjects(res.data);
+        } else if (Array.isArray(res)) {
+          setProjects(res);
+        } else {
+          setProjects([]);
+        }
+      } catch (err) {
+        // String conversion prevents React Error #31
+        setError(err?.message || 'Failed to connect to backend');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+    loadProjects();
+  }, []);
 
-// Request interceptor
-api.interceptors.request.use(
-  (config) => {
-    console.log(`🌐 API Request: ${config.method?.toUpperCase()} ${config.url}`);
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+  return (
+    <div style={{ padding: '20px', fontFamily: 'sans-serif', background: '#0f172a', color: '#fff', minHeight: '100vh' }}>
+      <h1>AI Design Dashboard</h1>
+      {loading && <p>Loading workspace...</p>}
+      
+      {/* String conversion for error message prevents object crash */}
+      {error && <div style={{ color: '#ef4444', padding: '10px', background: '#450a0a', borderRadius: '6px' }}>{String(error)}</div>}
 
-// Response interceptor
-api.interceptors.response.use(
-  (response) => response.data,
-  (error) => {
-    const message = error.response?.data?.error || error.message || 'Network error';
-    console.error('❌ API Error:', message);
-    
-    // Return empty array/data structure gracefully instead of breaking React rendering loops
-    return Promise.resolve({ success: false, data: [], error: message });
-  }
-);
+      <div style={{ marginTop: '20px' }}>
+        <h2>Projects</h2>
+        {projects.length === 0 ? (
+          <p style={{ color: '#94a3b8' }}>No projects loaded yet or server running in mock mode.</p>
+        ) : (
+          <ul>
+            {projects.map((proj, idx) => (
+              <li key={proj.id || idx}>
+                {/* NEVER render object directly - render explicit primitive properties */}
+                {typeof proj === 'object' ? (proj.name || proj.title || 'Untitled Project') : String(proj)}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
 
-// ─── API Methods ────────────────────────────────────────────────────────
-export const generateLayout = async (prompt, options = {}) => {
-  return api.post('/generate-layout', {
-    prompt,
-    canvasWidth: options.canvasWidth || 1200,
-    canvasHeight: options.canvasHeight || 800,
-    style: options.style || 'modern',
-    elementCount: options.elementCount || 10,
-  });
-};
-
-export const fetchProjects = async (params = {}) => {
-  return api.get('/projects', { params });
-};
-
-export const fetchProject = async (id) => {
-  return api.get(`/projects/${id}`);
-};
-
-export const createProject = async (data) => {
-  return api.post('/projects', data);
-};
-
-export const updateProject = async (id, data) => {
-  return api.put(`/projects/${id}`, data);
-};
-
-export const updateElements = async (id, elements) => {
-  return api.patch(`/projects/${id}/elements`, { elements });
-};
-
-export const deleteProject = async (id) => {
-  return api.delete(`/projects/${id}`);
-};
-
-export const duplicateProject = async (id) => {
-  return api.post(`/projects/${id}/duplicate`);
-};
-
-export const getStyles = async () => {
-  return api.get('/generate-layout/styles');
-};
-
-export default api;
+export default App;
